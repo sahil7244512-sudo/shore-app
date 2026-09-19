@@ -192,23 +192,64 @@
             searchTimeout = setTimeout(searchYouTube, 800); // Wait 800ms after typing stops
         }
 
-        async function searchYouTube() {
-            const query = document.getElementById('searchInput').value;
-            if(!query) {
-                document.getElementById('libraryList').innerHTML = '<div class="loading-text">Search for a song to start listening.</div>';
-                return;
+        async function playSong(safeSong, keepQueue = false) {
+            const song = typeof safeSong === 'string' ? JSON.parse(decodeURIComponent(safeSong)) : safeSong;
+
+            if (!keepQueue) {
+                currentQueue = [...displayedSongs];
+                currentSongIndex = currentQueue.findIndex(s => s.id === song.id);
             }
 
-            document.getElementById('libraryList').innerHTML = '<div class="loading-text">Searching YouTube Music...</div>';
+            document.getElementById('playerBar').style.display = 'flex';
+            document.getElementById('nowPlaying').innerText = song.title;
+            document.getElementById('nowPlayingArtist').innerText = "(Extracting...)";
+            document.getElementById('playerThumb').src = song.thumbnail;
+            document.getElementById('playPauseBtn').innerHTML = `<div style="font-size:12px">...</div>`;
             
             try {
-                const res = await fetch('/api/search?q=' + encodeURIComponent(query));
-                searchResults = await res.json();
-                renderSongList('libraryList', searchResults);
+                // THE JUDO MOVE: Massive fallback list to prevent adblocker/server drops
+                const instances = [
+                    "https://pipedapi.kavin.rocks",
+                    "https://pipedapi.tokhmi.xyz",
+                    "https://piped-api.garudalinux.org",
+                    "https://pipedapi.adminforge.de",
+                    "https://pipedapi.drgns.space",
+                    "https://pipedapi.smnz.de",
+                    "https://api.piped.projectsegfau.lt"
+                ];
+                
+                let finalUrl = null;
+                
+                for (let instance of instances) {
+                    try {
+                        const res = await fetch(`${instance}/streams/${song.id}`);
+                        if (!res.ok) continue;
+                        
+                        const data = await res.json();
+                        
+                        if (data.audioStreams && data.audioStreams.length > 0) {
+                            finalUrl = data.audioStreams[0].url;
+                            break; 
+                        }
+                    } catch (e) {
+                        continue; 
+                    }
+                }
+                
+                if (finalUrl) {
+                    document.getElementById('nowPlayingArtist').innerText = song.artist;
+                    const player = document.getElementById('audioPlayer');
+                    player.src = finalUrl;
+                    player.play();
+                    document.getElementById('playPauseBtn').innerHTML = icons.pause;
+                } else {
+                    document.getElementById('nowPlayingArtist').innerText = "Failed";
+                    alert("All stream servers are currently busy. Please try again.");
+                }
             } catch (e) {
-                document.getElementById('libraryList').innerHTML = '<div class="loading-text" style="color:#e74c3c;">Search failed. Try again.</div>';
+                document.getElementById('nowPlayingArtist').innerText = "Error";
             }
-        }
+         }
 
         // --- RENDER HELPERS ---
         function isSongLiked(songId) {
