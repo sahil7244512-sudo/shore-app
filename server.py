@@ -35,29 +35,40 @@ def search():
         print(f"Search Error: {e}")
         return jsonify({"error": "Search failed"}), 500
 
-@app.route('/api/stream/<video_id>')
-def get_stream_url(video_id):
-    # A fallback list of community API servers to bypass YouTube's datacenter blocks
-    instances = [
-        "https://pipedapi.kavin.rocks",
-        "https://pipedapi.smnz.de",
-        "https://de.piped.api.r4fo.com"
-    ]
-    
-    for instance in instances:
-        try:
-            # Ask the community server to extract the stream
-            res = requests.get(f"{instance}/streams/{video_id}", timeout=5).json()
-            
-            if 'audioStreams' in res and len(res['audioStreams']) > 0:
-                # Grab the direct proxy URL and send it to the phone
-                audio_url = res['audioStreams'][0]['url']
-                return jsonify({"stream_url": audio_url})
-        except Exception:
-            # If one server is busy, it automatically loops and tries the next one
-            continue
-            
-    return jsonify({"error": "Could not extract stream"}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+@app.route('/api/stream/<video_id>')
+def get_stream_url(video_id):
+    # Expanded list of community servers
+    instances = [
+        "https://pipedapi.kavin.rocks",
+        "https://api.piped.projectsegfau.lt",
+        "https://pipedapi.smnz.de",
+        "https://piped-api.lunar.icu"
+    ]
+    
+    # Spoof a real Windows/Chrome web browser so servers don't block us
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    
+    for instance in instances:
+        try:
+            print(f"Trying Piped API: {instance}")
+            res = requests.get(f"{instance}/streams/{video_id}", headers=headers, timeout=6)
+            
+            if res.status_code == 200:
+                data = res.json()
+                if 'audioStreams' in data and len(data['audioStreams']) > 0:
+                    audio_url = data['audioStreams'][0]['url']
+                    print(f"Success! Stream extracted via {instance}")
+                    return jsonify({"stream_url": audio_url})
+            else:
+                print(f"Failed on {instance} - Status Code: {res.status_code}")
+                
+        except Exception as e:
+            print(f"Error connecting to {instance}: {e}")
+            continue
+            
+    return jsonify({"error": "Could not extract stream"}), 500
