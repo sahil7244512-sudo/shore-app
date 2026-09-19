@@ -365,22 +365,44 @@
             document.getElementById('playPauseBtn').innerHTML = `<div style="font-size:12px">...</div>`;
             
             try {
-                // Ask Python server to extract the YouTube stream URL
-                const res = await fetch('/api/stream/' + song.id);
-                const data = await res.json();
+                // THE JUDO MOVE: The phone asks the community servers directly, bypassing Render's IP block!
+                const instances = [
+                    "https://pipedapi.kavin.rocks",
+                    "https://pipedapi.smnz.de",
+                    "https://api.piped.projectsegfau.lt",
+                    "https://piped-api.lunar.icu"
+                ];
                 
-                if (data.stream_url) {
+                let finalUrl = null;
+                
+                for (let instance of instances) {
+                    try {
+                        const res = await fetch(`${instance}/streams/${song.id}`);
+                        if (!res.ok) continue;
+                        
+                        const data = await res.json();
+                        
+                        if (data.audioStreams && data.audioStreams.length > 0) {
+                            finalUrl = data.audioStreams[0].url;
+                            break; // Stop at the first server that successfully gives us the URL
+                        }
+                    } catch (e) {
+                        continue; // If a server is down, seamlessly try the next one
+                    }
+                }
+                
+                if (finalUrl) {
                     document.getElementById('nowPlayingArtist').innerText = song.artist;
                     const player = document.getElementById('audioPlayer');
-                    player.src = data.stream_url;
+                    player.src = finalUrl;
                     player.play();
                     document.getElementById('playPauseBtn').innerHTML = icons.pause;
                 } else {
-                    alert("Could not load stream.");
                     document.getElementById('nowPlayingArtist').innerText = "Failed";
+                    alert("All stream servers are currently busy. Please try again.");
                 }
             } catch (e) {
-                alert("Network error.");
+                document.getElementById('nowPlayingArtist').innerText = "Error";
             }
         }
 
