@@ -2,3 +2,4 @@ Flask
 ytmusicapi
 yt-dlp
 gunicorn
+bgutil-ytdlp-pot-provider
