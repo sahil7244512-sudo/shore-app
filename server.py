@@ -8,12 +8,15 @@ app = Flask(__name__, static_folder='.')
 # Initialize the YouTube Music API scraper
 ytmusic = YTMusic()
 
-# Configure the video scraper to only extract the best audio stream
+# Configure the video scraper to extract the best audio stream
+# AND use the PO Token provider to bypass YouTube's bot detection
 ydl_opts = {
     'format': 'bestaudio/best',
     'quiet': True,
     'no_warnings': True,
     'extract_flat': True,
+    # This line tells yt-dlp to use the mweb client which requires the token
+    'extractor_args': {'youtube': {'player_client': ['mweb']}},
 }
 
 @app.route('/')
@@ -53,6 +56,10 @@ def search():
 
 @app.route('/api/stream/<video_id>')
 def get_stream_url(video_id):
+    
+    # NEW: Register the PO Token provider plugin right before extraction
+    ydl_opts['pot_provider'] = 'bgutil'
+    
     try:
         # Give yt-dlp the YouTube video ID
         url = f"https://www.youtube.com/watch?v={video_id}"
