@@ -10,13 +10,14 @@ ytmusic = YTMusic()
 
 # Configure the video scraper to extract the best audio stream
 # AND use the PO Token provider to bypass YouTube's bot detection
+# Configure the video scraper to extract the best audio stream
 ydl_opts = {
     'format': 'bestaudio/best',
-    'quiet': True,
+    'quiet': False,       # Changed to False so we can see errors in the console!
     'no_warnings': True,
-    'extract_flat': True,
-    # This line tells yt-dlp to use the mweb client which requires the token
-    'extractor_args': {'youtube': {'player_client': ['mweb']}},
+    # extract_flat has been REMOVED so it actually grabs the stream
+    # Spoof an Android device to bypass strict Web token blocks
+    'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
 }
 
 @app.route('/')
