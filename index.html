@@ -164,7 +164,6 @@
             remove: `<svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`
         };
 
-        // Initialize Local Storage for user data
         let userData = JSON.parse(localStorage.getItem('shore_data')) || { liked: [], playlists: {} };
         function saveLocalData() { localStorage.setItem('shore_data', JSON.stringify(userData)); }
 
@@ -176,7 +175,6 @@
         let searchTimeout;
         let selectedSongForModal = null;
 
-        // Ensure Library renders on load
         renderPlaylists();
 
         function showToast(msg) {
@@ -186,10 +184,9 @@
             setTimeout(() => t.style.display = 'none', 2500);
         }
 
-        // --- SEARCH YOUTUBE WITH DEBOUNCE ---
         function onSearchInput() {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(searchYouTube, 800); // Wait 800ms after typing stops
+            searchTimeout = setTimeout(searchYouTube, 800); 
         }
 
         async function searchYouTube() {
@@ -202,7 +199,6 @@
             document.getElementById('libraryList').innerHTML = '<div class="loading-text">Searching...</div>';
             
             try {
-                // THE JUDO MOVE: Phone searches directly through community APIs!
                 const instances = [
                     "https://pipedapi.kavin.rocks",
                     "https://pipedapi.tokhmi.xyz",
@@ -221,18 +217,16 @@
                         const data = await res.json();
                         if (data && data.items && data.items.length > 0) {
                             searchData = data.items;
-                            break; // Stop at the first server that successfully gives us results
+                            break; 
                         }
                     } catch (e) {
-                        continue; // If a server is blocked, silently try the next one
+                        continue; 
                     }
                 }
                 
                 if (!searchData) throw new Error("Servers blocked");
 
-                // Format the results exactly how our frontend expects them
                 searchResults = searchData.slice(0, 15).map(item => {
-                    // Extract the raw video ID from the URL
                     const vidId = item.url.includes('v=') ? item.url.split('v=')[1].split('&')[0] : item.url;
                     return {
                         id: vidId,
@@ -247,23 +241,7 @@
                 document.getElementById('libraryList').innerHTML = '<div class="loading-text" style="color:#e74c3c;">Search failed. Please try again.</div>';
             }
         }
-                
-                if (finalUrl) {
-                    document.getElementById('nowPlayingArtist').innerText = song.artist;
-                    const player = document.getElementById('audioPlayer');
-                    player.src = finalUrl;
-                    player.play();
-                    document.getElementById('playPauseBtn').innerHTML = icons.pause;
-                } else {
-                    document.getElementById('nowPlayingArtist').innerText = "Failed";
-                    alert("All stream servers are currently busy. Please try again.");
-                }
-            } catch (e) {
-                document.getElementById('nowPlayingArtist').innerText = "Error";
-            }
-         }
 
-        // --- RENDER HELPERS ---
         function isSongLiked(songId) {
             return userData.liked.some(s => s.id === songId);
         }
@@ -329,7 +307,6 @@
             renderSongList('playlistSongList', songsToRender, name);
         }
 
-        // --- PLAYLIST LOGIC (Saved Locally) ---
         function toggleLike(safeSong) {
             const song = JSON.parse(decodeURIComponent(safeSong));
             if (isSongLiked(song.id)) {
@@ -339,7 +316,6 @@
             }
             saveLocalData();
             
-            // Re-render current view to update hearts
             if(document.getElementById('view-home').classList.contains('active-view')) {
                 renderSongList('libraryList', searchResults);
             } else if (document.getElementById('view-single-playlist').classList.contains('active-view')) {
@@ -373,7 +349,6 @@
                 div.className = 'modal-item';
                 div.innerText = pName;
                 div.onclick = () => {
-                    // Check if already in playlist to avoid duplicates
                     if(!userData.playlists[pName].some(s => s.id === selectedSongForModal.id)) {
                         userData.playlists[pName].push(selectedSongForModal);
                         saveLocalData();
@@ -401,7 +376,6 @@
             }
         }
 
-        // --- PREMIUM AUDIO PLAYER ---
         async function playSong(safeSong, keepQueue = false) {
             const song = typeof safeSong === 'string' ? JSON.parse(decodeURIComponent(safeSong)) : safeSong;
 
@@ -410,7 +384,6 @@
                 currentSongIndex = currentQueue.findIndex(s => s.id === song.id);
             }
 
-            // Show loading state in player
             document.getElementById('playerBar').style.display = 'flex';
             document.getElementById('nowPlaying').innerText = song.title;
             document.getElementById('nowPlayingArtist').innerText = "(Extracting...)";
@@ -418,12 +391,13 @@
             document.getElementById('playPauseBtn').innerHTML = `<div style="font-size:12px">...</div>`;
             
             try {
-                // THE JUDO MOVE: The phone asks the community servers directly, bypassing Render's IP block!
                 const instances = [
                     "https://pipedapi.kavin.rocks",
+                    "https://pipedapi.tokhmi.xyz",
+                    "https://piped-api.garudalinux.org",
+                    "https://pipedapi.adminforge.de",
                     "https://pipedapi.smnz.de",
-                    "https://api.piped.projectsegfau.lt",
-                    "https://piped-api.lunar.icu"
+                    "https://api.piped.projectsegfau.lt"
                 ];
                 
                 let finalUrl = null;
@@ -437,10 +411,10 @@
                         
                         if (data.audioStreams && data.audioStreams.length > 0) {
                             finalUrl = data.audioStreams[0].url;
-                            break; // Stop at the first server that successfully gives us the URL
+                            break; 
                         }
                     } catch (e) {
-                        continue; // If a server is down, seamlessly try the next one
+                        continue; 
                     }
                 }
                 
